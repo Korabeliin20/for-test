@@ -1,12 +1,16 @@
-from src.yatl.request_builder import build_url, extract_request_params, process_body
-
 from unittest.mock import patch
 
 import pytest
 import requests
 
+from src.yatl.request_builder import (
+    build_url,
+    extract_request_params,
+    process_body,
+    send_request,
+)
 from yatl.exceptions import YATLRequestError
-from src.yatl.request_builder import send_request
+
 
 def test_build_url():
     assert build_url("google.com", "") == "https://google.com/"
@@ -59,7 +63,6 @@ def test_process_body_xml():
     assert headers == {"Content-Type": "application/xml"}
 
 
-
 CONTEXT = {"base_url": "https://api.example.com"}
 
 RESOLVED_STEP = {
@@ -69,12 +72,16 @@ RESOLVED_STEP = {
     }
 }
 
+
 def test_send_request_raises_yatl_request_error_on_timeout_without_value():
     "Test that send_request raises YATLRequestError on timeout with no timeout set."
     with patch("src.yatl.request_builder.request") as mock_request:
         mock_request.side_effect = requests.exceptions.Timeout()
 
-        with pytest.raises(YATLRequestError, match="Request timed out \\(no explicit timeout set\\): GET"):
+        with pytest.raises(
+            YATLRequestError,
+            match="Request timed out \\(no explicit timeout set\\): GET",
+        ):
             send_request(CONTEXT, RESOLVED_STEP)
 
 

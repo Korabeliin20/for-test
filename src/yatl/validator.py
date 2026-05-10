@@ -9,6 +9,14 @@ from requests import Response
 from .utils import get_content_type, get_nested_value
 
 
+class ContentType(StrEnum):
+    """Enum for supported content types."""
+
+    JSON = "application/json"
+    XML = "application/xml"
+    TEXT = "text/plain"
+
+
 class BodyFormat(StrEnum):
     """Enum for supported body formats."""
 
@@ -31,9 +39,9 @@ class BodyFormat(StrEnum):
         """
 
         mapping = {
-            "application/json": cls.JSON,
-            "application/xml": cls.XML,
-            "text/plain": cls.TEXT,
+            ContentType.JSON: cls.JSON,
+            ContentType.XML: cls.XML,
+            ContentType.TEXT: cls.TEXT,
         }
 
         if content_type in mapping:
@@ -216,6 +224,45 @@ class ResponseValidator:
         except ValueError:
             return None
 
+    def _extract_format_and_spec(
+        self, body_spec: Any, content_type: str
+    ) -> tuple[BodyFormat, Any]:
+        """
+        Extracts the format and spec from the body spec.
+
+        Args:
+            body_spec: The body spec to extract from.
+            content_type: The content-type string.
+
+        Returns:
+            A tuple containing the format and the spec.
+
+        Raises:
+            AssertionError: If the content-type is not supported.
+        """
+        if isinstance(body_spec, dict):
+            for fmt in BodyFormat:
+                if fmt in body_spec:
+                    return fmt, body_spec[fmt]
+
+        try:
+            fmt = BodyFormat.from_content_type(content_type)
+            return fmt, body_spec
+        except ValueError:
+            raise AssertionError(f"Unsupported content-type: {content_type}")
+
+    def _validate_body(self, body_format, body_spec: Any) -> None:
+        """
+        Validates the response body based on format.
+
+        Raises:
+            AssertionError: If the body validation fails.
+        """
+        validator = self._body_validators.get(body_format)
+        if validator is None:
+            raise AssertionError(f"No validator for format: {body_format}")
+        validator(self.response, body_spec)
+
     def check_expectations(self) -> None:
         """Runs all validations defined in the expectation spec.
 
@@ -233,32 +280,5 @@ class ResponseValidator:
             return
 
         content_type = get_content_type(self.response.headers.get("Content-Type", ""))
-        validator = self._get_body_validator(content_type)
-
-        if validator is not None:
-            if isinstance(body_spec, dict) and BodyFormat.JSON in body_spec:
-                validator(self.response, body_spec[BodyFormat.JSON])
-            elif isinstance(body_spec, dict) and BodyFormat.XML in body_spec:
-                validator(self.response, body_spec[BodyFormat.XML])
-            elif isinstance(body_spec, dict) and BodyFormat.TEXT in body_spec:
-                validator(self.response, body_spec[BodyFormat.TEXT])
-            else:
-                if content_type == "application/json":
-                    validate_json_body(self.response, body_spec)
-                elif content_type == "application/xml":
-                    validate_xml_body(self.response, body_spec)
-                elif content_type == "text/plain":
-                    validate_text_body(self.response, body_spec)
-                else:
-                    raise AssertionError(
-                        f"Unsupported body validation for content-type: {content_type}"
-                    )
-        else:
-            if isinstance(body_spec, dict) and BodyFormat.JSON in body_spec:
-                validate_json_body(self.response, body_spec[BodyFormat.JSON])
-            elif isinstance(body_spec, dict) and BodyFormat.TEXT in body_spec:
-                validate_text_body(self.response, body_spec[BodyFormat.TEXT])
-            else:
-                raise AssertionError(
-                    f"Unsupported body validation for content-type: {content_type}"
-                )
+        body_format, body_spec = self._extract_format_and_spec(body_spec, content_type)
+        self._validate_body(body_format, body_spec)
