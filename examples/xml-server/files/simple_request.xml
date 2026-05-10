@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<message>
+  <from>YATL</from>
+  <to>API Server</to>
+  <content>Hello XML World!</content>
+  <metadata>
+    <priority>high</priority>
+    <type>test</type>
+  </metadata>
+</message>

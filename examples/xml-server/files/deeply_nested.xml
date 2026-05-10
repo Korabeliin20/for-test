@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<company>
+  <name>TechCorp</name>
+  <departments>
+    <department id="1">
+      <name>Engineering</name>
+      <employees>
+        <employee>
+          <id>101</id>
+          <name>John Doe</name>
+          <position>Senior Developer</position>
+          <skills>
+            <skill>Python</skill>
+            <skill>FastAPI</skill>
+            <skill>XML</skill>
+          </skills>
+        </employee>
+        <employee>
+          <id>102</id>
+          <name>Jane Smith</name>
+          <position>QA Engineer</position>
+          <skills>
+            <skill>Testing</skill>
+            <skill>Automation</skill>
+          </skills>
+        </employee>
+      </employees>
+    </department>
+    <department id="2">
+      <name>Sales</name>
+      <employees>
+        <employee>
+          <id>201</id>
+          <name>Bob Johnson</name>
+          <position>Sales Manager</position>
+        </employee>
+      </employees>
+    </department>
+  </departments>
+</company>

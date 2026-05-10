@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<order>
+  <id>ORD-001</id>
+  <customer>
+    <name>John Smith</name>
+    <email>john@example.com</email>
+    <address>
+      <street>Main Street</street>
+      <city>New York</city>
+      <zip>10001</zip>
+    </address>
+  </customer>
+  <items>
+    <item>
+      <id>1</id>
+      <name>Laptop</name>
+      <quantity>1</quantity>
+      <price>1500.00</price>
+    </item>
+    <item>
+      <id>2</id>
+      <name>Mouse</name>
+      <quantity>2</quantity>
+      <price>25.50</price>
+    </item>
+  </items>
+  <total>1551.00</total>
+</order>

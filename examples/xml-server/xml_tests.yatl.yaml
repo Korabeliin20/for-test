@@ -1,0 +1,141 @@
+name: XML API Tests
+base_url: http://localhost:8000
+
+steps:
+  # 1. Simple XML request sending
+  - name: Send simple XML request
+    description: Sending simple XML request
+    request:
+      method: POST
+      url: /api/xml/simple
+      headers:
+        accept: application/xml
+      body:
+        xml: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <message>
+            <from>YATL</from>
+            <to>API Server</to>
+            <content>Hello XML World!</content>
+            <metadata>
+              <priority>high</priority>
+              <type>test</type>
+            </metadata>
+          </message>
+    expect:
+      status: 200
+      body:
+        xml:
+          "/message/from": "YATL"
+          "/message/to": "API Server"
+          "/message/content": "Hello XML World!"
+          "/message/metadata/priority": "high"
+
+  # 2. Create order with nested structure
+  - name: Create order with nested XML
+    description: Creating order with nested elements
+    request:
+      method: POST
+      url: /api/xml/order
+      body:
+        xml: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <order>
+            <id>ORD-001</id>
+            <customer>
+              <name>John Smith</name>
+              <email>john@example.com</email>
+              <address>
+                <street>Main Street</street>
+                <city>New York</city>
+                <zip>10001</zip>
+              </address>
+            </customer>
+            <items>
+              <item>
+                <id>1</id>
+                <name>Laptop</name>
+                <quantity>1</quantity>
+                <price>1500.00</price>
+              </item>
+              <item>
+                <id>2</id>
+                <name>Mouse</name>
+                <quantity>2</quantity>
+                <price>25.50</price>
+              </item>
+            </items>
+            <total>1551.00</total>
+          </order>
+    expect:
+      status: 200
+      body:
+        xml:
+          "/orderResponse/id": "ORD-001"
+          "/orderResponse/status": "created"
+          "/orderResponse/customer/name": "John Smith"
+          "/orderResponse/customer/message": "Order received successfully"
+    extract:
+      order_id: "/orderResponse/id"
+      order_status: "/orderResponse/status"
+
+  # 3. Get orders list
+  - name: Get orders list
+    description: Getting orders list in XML format
+    request:
+      method: GET
+      url: /api/xml/orders
+    expect:
+      status: 200
+      body:
+        xml:
+          "/orders/order[1]/id": "ORD-001"
+          "/orders/order[1]/customer/name": "John Smith"
+
+  # 4. Work with deeply nested structure
+  - name: Test deeply nested XML
+    description: Testing deeply nested XML structure
+    request:
+      method: GET
+      url: /api/xml/nested
+    expect:
+      status: 200
+      body:
+        xml:
+          "/company/name": "TechCorp"
+          "/company/departments/department[1]/name": "Engineering"
+          "/company/departments/department[1]/employees/employee[1]/name": "John Doe"
+          "/company/departments/department[1]/employees/employee[1]/position": "Senior Developer"
+          "/company/departments/department[1]/employees/employee[1]/skills/skill[1]": "Python"
+          "/company/departments/department[1]/employees/employee[1]/skills/skill[2]": "FastAPI"
+          "/company/departments/department[2]/name": "Sales"
+          "/company/departments/department[2]/employees/employee[1]/id": "201"
+    extract:
+      company_name: "/company/name"
+      first_dept_name: "/company/departments/department[1]/name"
+      first_employee_name: "/company/departments/department[1]/employees/employee[1]/name"
+      python_skill: "/company/departments/department[1]/employees/employee[1]/skills/skill[1]"
+
+  # 5. Use extracted data in next step
+  - name: Use extracted data
+    description: Using data extracted from previous response
+    request:
+      method: POST
+      url: /api/xml/simple
+      body:
+        xml: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <summary>
+            <company>{{ company_name }}</company>
+            <department>{{ first_dept_name }}</department>
+            <employee>{{ first_employee_name }}</employee>
+            <skill>{{ python_skill }}</skill>
+          </summary>
+    expect:
+      status: 200
+      body:
+        xml:
+          "/summary/company": "TechCorp"
+          "/summary/department": "Engineering"
+          "/summary/employee": "John Doe"
+          "/summary/skill": "Python"
