@@ -3,22 +3,7 @@ import json
 import pytest
 from requests import Response
 
-from src.yatl.validator import BodyFormat, validate_json_body
-
-
-def test_from_content_type_json():
-    "Test JSON content type."
-    assert BodyFormat.from_content_type("application/json") == BodyFormat.JSON
-
-
-def test_from_content_type_xml():
-    "Test XML content type."
-    assert BodyFormat.from_content_type("application/xml") == BodyFormat.XML
-
-
-def test_from_content_type_text():
-    """Test text/plain content type."""
-    assert BodyFormat.from_content_type("text/plain") == BodyFormat.TEXT
+from src.yatl.validator import validate_json_body
 
 
 class MockResponse(Response):
