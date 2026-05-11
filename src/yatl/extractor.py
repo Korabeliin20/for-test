@@ -162,42 +162,59 @@ class DataExtractor:
     and applies the appropriate extraction method.
     """
 
-    _extractors = {
-        "json": JsonExtractor(),
-        "xml": XmlExtractor(),
-        "text": TextExtractor(),
-    }
-
     def __init__(self):
-        """Initializes the data extractor."""
-        pass
+        """Initializes the data extractor and registers default extractors."""
+        self._extractors = {}
+        self._format_detectors = []
+        self._register_defaults()
 
-    def _detect_format(self, response: Response) -> str:
-        """Try to guess the response format based on content.
+    def _register_defaults(self):
+        self.register("json", JsonExtractor())
+        self.register("xml", XmlExtractor())
+        self.register("text", TextExtractor())
 
-        Returns:
-            One of 'json', 'xml', 'text', or 'unknown'.
-        """
+        self.register_format_detector(self._detect_json)
+        self.register_format_detector(self._detect_xml)
+        self.register_format_detector(self._detect_text)
+
+    def register(self, format_name, extractor):
+        self._extractors[format_name] = extractor
+
+    def register_format_detector(self, detector_func):
+        """Добавить функцию для определения формата"""
+        self._format_detectors.append(detector_func)
+
+    def _detect_json(self, response):
         content_type = get_content_type(response.headers.get("Content-Type", ""))
         if "json" in content_type:
             return "json"
-        if "xml" in content_type:
-            return "xml"
-        if "text/plain" in content_type or "text/html" in content_type:
-            return "text"
-
         try:
             response.json()
             return "json"
-        except json.JSONDecodeError:
-            pass
+        except:
+            return None
 
+    def _detect_xml(self, response):
+        content_type = get_content_type(response.headers.get("Content-Type", ""))
+        if "xml" in content_type:
+            return "xml"
         try:
             etree.fromstring(response.content)
             return "xml"
         except etree.XMLSyntaxError:
-            pass
+            return None
 
+    def _detect_text(self, response):
+        content_type = get_content_type(response.headers.get("Content-Type", ""))
+        if "text" in content_type:
+            return "text"
+        return None
+
+    def _detect_format(self, response: Response) -> str:
+        for detector in self._format_detectors:
+            result = detector(response)
+            if result:
+                return result
         return "unknown"
 
     def extract(
