@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 import requests
 from requests import Response, request
@@ -117,6 +117,49 @@ def extract_request_params(
     return method, url, timeout, headers, params, cookies, body
 
 
+def handle_json_format(
+    value: Any, headers: dict[str, str], kwargs: dict[str, Any]
+) -> None:
+    kwargs["json"] = value
+    _set_content_type(headers, "application/json")
+
+
+def handle_text_format(
+    value: Any, headers: dict[str, str], kwargs: dict[str, Any]
+) -> None:
+    kwargs["data"] = value
+    _set_content_type(headers, "text/plain")
+
+
+def handle_form_format(
+    value: Any, headers: dict[str, str], kwargs: dict[str, Any]
+) -> None:
+    kwargs["data"] = value
+    _set_content_type(headers, "application/x-www-form-urlencoded")
+
+
+def handle_xml_format(
+    value: Any, headers: dict[str, str], kwargs: dict[str, Any]
+) -> None:
+    kwargs["data"] = value
+    _set_content_type(headers, "application/xml")
+
+
+def handle_files_format(
+    value: Any, headers: dict[str, str], kwargs: dict[str, Any]
+) -> None:
+    kwargs["files"] = value
+
+
+FORMAT_HANDLERS: dict[str, Callable[[Any, dict[str, str], dict[str, Any]], None]] = {
+    "json": handle_json_format,
+    "text": handle_text_format,
+    "form": handle_form_format,
+    "xml": handle_xml_format,
+    "files": handle_files_format,
+}
+
+
 def process_body(
     body: dict[str, Any] | str, headers: dict[str, str], kwargs: dict[str, Any]
 ) -> None:
@@ -131,27 +174,13 @@ def process_body(
         ValueError: If the body has an unsupported type.
     """
     if isinstance(body, dict):
-        for format, fmt, key in [
-            ("json", "application/json", "json"),
-            ("text", "text/plain", "data"),
-            ("form", "application/x-www-form-urlencoded", "data"),
-        ]:
-            if format in body:
-                kwargs[key] = body[format]
-                _set_content_type(headers, fmt)
-
-        if "xml" in body:
-            xml_content = body["xml"]
-            if isinstance(xml_content, str):
-                kwargs["data"] = xml_content
-                _set_content_type(headers, "application/xml")
-
-        if "files" in body:
-            kwargs["files"] = body["files"]
-
+        for format_key, format_value in body.items():
+            if format_key in FORMAT_HANDLERS:
+                FORMAT_HANDLERS[format_key](format_value, headers, kwargs)
+            else:
+                raise ValueError(f"Unsupported body type: {type(body)}")
     elif isinstance(body, str):
-        kwargs["data"] = body
-        _set_content_type(headers, "text/plain")
+        handle_text_format(body, headers, kwargs)
     else:
         raise ValueError(f"Unsupported body type: {type(body)}")
 
