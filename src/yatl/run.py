@@ -101,6 +101,8 @@ class Runner:
         step: dict,
         context: dict,
         reporter: IReporter,
+        is_parametrize_step: bool = False,
+        data: tuple = None,
     ) -> dict[Any, Any]:
         """Execute a single step.
 
@@ -113,6 +115,7 @@ class Runner:
         Returns:
             Updated context dictionary.
         """
+
         if step is None:
             return context
 
@@ -121,6 +124,17 @@ class Runner:
                 skipped(f"Step {step_number}: {step.get('name', '')} skipped")
             )
             return context
+
+        elif is_parametrize_step:
+            reporter.add_info(info(f"Step {step_number}, params: {data}"))
+
+            return execute_step(
+                step,
+                context,
+                self.data_extractor,
+                self.template_renderer,
+                self.response_validator_factory,
+            )
         else:
             reporter.add_info(info(f"Step {step_number}: {step.get('name', '')}"))
 
@@ -161,11 +175,28 @@ class Runner:
 
         reporter.add_info(header("-" * 10))
         reporter.add_info(header(f"Run test: {test_specification.get('name', '')}"))
-
         steps: list[dict] = test_specification.get("steps", [])
+        step_number = 1
 
-        for i, step in enumerate(steps, start=1):
-            context = self._process_step(i, step, context, reporter)
+        for step in steps:
+            parametrize = step.get("parametrize", None)
+            if parametrize:
+                for param in parametrize:
+                    data = tuple(v for v in param.values())
+                    for k, v in param.items():
+                        context[k] = v
+                    context = self._process_step(
+                        step_number,
+                        step,
+                        context,
+                        reporter,
+                        is_parametrize_step=True,
+                        data=data,
+                    )
+                    step_number += 1
+            else:
+                context = self._process_step(step_number, step, context, reporter)
+                step_number += 1
 
         reporter.add_info(success("Test passed"))
         reporter.print_info()

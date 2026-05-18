@@ -1,0 +1,27 @@
+name: Params test
+base_url: google.com
+
+
+steps:
+  - name: Ping
+
+    parametrize:
+
+      - path: /
+        expected_status: 200
+
+      - path: /not_found
+        expected_status: 404
+
+    request:
+      method: GET
+      url: "{{ path }}"
+    expect:
+      status: "{{ expected_status }}"
+
+  - name: foo
+
+    request:
+      method: GET
+    expect:
+      status: 200
