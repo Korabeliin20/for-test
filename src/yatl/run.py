@@ -21,7 +21,6 @@ from .utils import create_context, is_skipped, load_test_yaml, search_files
 from .validator import ResponseValidator
 
 
-
 def run_tests_concurrently(runner, test_path: str = ".", max_workers: int = 10) -> None:
     """Runs all tests in parallel.
 
@@ -39,11 +38,18 @@ def run_tests_concurrently(runner, test_path: str = ".", max_workers: int = 10) 
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(runner.run_test, file): file for file in files}
+        error_messages = []
         for future in as_completed(futures):
             try:
                 future.result()
             except Exception as e:
-                print(error(f"Test {futures[future]} failed with error: {e}"))
+                error_messages.append(f"Test {futures[future]} failed with error: {e}")
+
+        if error_messages:
+            print(error(f"{len(error_messages)} test(s) failed"))
+            for message in error_messages:
+                print(error(message))
+            SystemExit(1)
 
 
 def run_test_not_concurrently(runner, test_path: str = ".") -> None:
@@ -54,6 +60,8 @@ def run_test_not_concurrently(runner, test_path: str = ".") -> None:
         test_path: Path to directory containing test files.
     """
     files = search_files(test_path)
+    error_messages = []
+
     if not files:
         print(skipped(f"No .yatl.yaml files found in {test_path}"))
         return
@@ -64,8 +72,13 @@ def run_test_not_concurrently(runner, test_path: str = ".") -> None:
         try:
             runner.run_test(file)
         except Exception as e:
-            print(error(f"Test {file} failed with error: {e}"))
+            error_messages.append(f"Test {file} failed with error: {e}")
 
+    if error_messages:
+        print(error(f"{len(error_messages)} test(s) failed"))
+        for message in error_messages:
+            print(error(message))
+        SystemExit(1)
 
 
 class Runner:
@@ -174,9 +187,7 @@ class Runner:
         test_name = test_specification.get("name") or Path(yaml_path).name
 
         if is_skipped(test_specification):
-            reporter.add_info(
-                skipped(f"Test {test_name} skipped")
-            )
+            reporter.add_info(skipped(f"Test {test_name} skipped"))
             reporter.print_info()
             return
 
