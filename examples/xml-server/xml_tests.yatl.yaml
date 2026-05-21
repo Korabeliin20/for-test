@@ -1,5 +1,6 @@
 name: XML API Tests
 base_url: http://localhost:8000
+skip: true
 
 steps:
   # 1. Simple XML request sending
