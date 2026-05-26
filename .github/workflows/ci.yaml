@@ -63,4 +63,4 @@ jobs:
         run: poetry install --with dev
 
       - name: run tests
-        run: poetry run yatl ./integration_tests
+        run: poetry run yatl ./smoke
