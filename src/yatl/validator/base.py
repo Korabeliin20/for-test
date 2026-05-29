@@ -6,7 +6,7 @@ from requests import Response
 
 from yatl.utils import get_content_type
 
-from .json_validator import validate_json_body
+from .json_validator import coerce_to_actual_type, validate_json_body
 from .text_validator import validate_text_body
 from .xml_validator import validate_xml_body
 
@@ -90,8 +90,9 @@ class ResponseValidator:
             AssertionError: If the status code does not match.
         """
         expected_status = self.expect_spec.get("status")
-        if isinstance(expected_status, str) and expected_status.isdigit():
-            expected_status = int(expected_status)
+        expected_status = coerce_to_actual_type(
+            expected_status, self.response.status_code
+        )
         if expected_status is not None and self.response.status_code != expected_status:
             raise AssertionError(
                 f"Expected status {expected_status}, got {self.response.status_code}"
@@ -116,6 +117,8 @@ class ResponseValidator:
                 else:
                     norm_expected = expected_value
                     norm_actual = actual
+
+                norm_expected = coerce_to_actual_type(norm_expected, norm_actual)
 
                 if norm_actual != norm_expected:
                     raise AssertionError(

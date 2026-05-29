@@ -6,6 +6,44 @@ from requests import Response
 from yatl.utils import get_nested_value
 
 
+def coerce_to_actual_type(expected: Any, actual: Any) -> Any:
+    """Aware type coercion for expected and actual values.
+
+    Args:
+        expected: The expected value.
+        actual: The actual value.
+
+    Returns:
+        The coerced value.
+    """
+    if type(expected) is type(actual):
+        return expected
+    if isinstance(actual, bool):
+        if isinstance(expected, str):
+            if expected.lower() in ("true", "false"):
+                return expected.lower() == "true"
+    if isinstance(actual, int) and not isinstance(actual, bool):
+        try:
+            return int(expected)
+        except (ValueError, TypeError):
+            pass
+    if isinstance(actual, float):
+        try:
+            return float(expected)
+        except (ValueError, TypeError):
+            pass
+    if isinstance(actual, (list, dict)):
+        if isinstance(expected, str):
+            import json
+
+            try:
+                return json.loads(expected)
+            except json.JSONDecodeError:
+                pass
+
+    return expected
+
+
 def validate_json_body(response: Response, expected_json: dict[str, Any]) -> None:
     """Validates that the JSON response matches the expected structure.
 
@@ -45,7 +83,8 @@ def _validate_json_response(
                 actual = get_nested_value(data, key)
             except ValueError as e:
                 raise AssertionError(f"Path '{key}' not found in response: {e}")
-            if actual != expected_value:
+            coerced = coerce_to_actual_type(expected_value, actual)
+            if actual != coerced:
                 raise AssertionError(
                     f"For path '{key}' expected '{expected_value}', got '{actual}'"
                 )
@@ -56,7 +95,7 @@ def _validate_json_response(
             actual = data[key]
             if isinstance(actual, dict) and isinstance(expected_value, dict):
                 _validate_json_response(actual, expected_value)
-            elif actual != expected_value:
+            elif actual != coerce_to_actual_type(expected_value, data[key]):
                 raise AssertionError(
                     f"For key '{key}' expected '{expected_value}', got '{actual}'"
                 )
