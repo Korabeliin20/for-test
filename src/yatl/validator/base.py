@@ -140,32 +140,30 @@ class ResponseValidator:
         except ValueError:
             return None
 
-    def _extract_format_and_spec(
-        self, body_spec: Any, content_type: str
-    ) -> tuple[ContentFormat, Any]:
+    def _extract_format_and_spec(self, body_spec: Any) -> tuple[ContentFormat, Any]:
         """
         Extracts the format and spec from the body spec.
 
         Args:
             body_spec: The body spec to extract from.
-            content_type: The content-type string.
 
         Returns:
             A tuple containing the format and the spec.
 
         Raises:
-            AssertionError: If the content-type is not supported.
+            AssertionError: If the body_spec is not a dict with one of
+                {ContentFormat} keys (json, xml, or text).
+
         """
         if isinstance(body_spec, dict):
             for fmt in ContentFormat:
                 if fmt in body_spec:
                     return fmt, body_spec[fmt]
 
-        try:
-            fmt = ContentFormat.from_mime_type(content_type)
-            return fmt, body_spec
-        except ValueError:
-            raise AssertionError(f"Unsupported content-type: {content_type}")
+        raise AssertionError(
+            f"Body spec must be a dict with one of {list(ContentFormat)} keys, "
+            f"got: {type(body_spec).__name__}"
+        )
 
     def _validate_body(self, body_format: ContentFormat, body_spec: Any) -> None:
         """
@@ -195,6 +193,5 @@ class ResponseValidator:
         if body_spec is None:
             return
 
-        content_type = get_content_type(self.response.headers.get("Content-Type", ""))
-        body_format, body_spec = self._extract_format_and_spec(body_spec, content_type)
+        body_format, body_spec = self._extract_format_and_spec(body_spec)
         self._validate_body(body_format, body_spec)
