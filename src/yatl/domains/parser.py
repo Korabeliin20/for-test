@@ -2,14 +2,17 @@
 
 from typing import Any
 
-from yatl.domains.domain import ExpectSpec, ExtractSpec, TestSpecification, TestStep
+from yatl.domains.domain import TestSpecification
 from yatl.domains.http import (
     Body,
     BodyExpectation,
     ContentFormat,
+    ExpectSpec,
+    ExtractSpec,
     FilesBody,
     FormBody,
     HttpRequest,
+    HttpTestStep,
     JsonBody,
     TextBody,
     XmlBody,
@@ -40,7 +43,7 @@ def parse_test_specification(raw: dict[str, Any]) -> TestSpecification:
     )
 
 
-def parse_step(raw: dict[str, Any]) -> TestStep:
+def parse_step(raw: dict[str, Any]) -> HttpTestStep:
     """Parses a raw step dictionary into a Step domain object.
 
     Args:
@@ -58,7 +61,7 @@ def parse_step(raw: dict[str, Any]) -> TestStep:
     expect = parse_expect_spec(raw.get("expect"))
     extract = parse_extract_spec(raw.get("extract"))
 
-    return TestStep(
+    return HttpTestStep(
         name=name,
         description=description,
         request=request,
@@ -124,8 +127,12 @@ def parse_body(raw: Any) -> Body | None:
         elif "text" in raw:
             return TextBody(data=str(raw["text"]))
 
-    # Fallback: treat the entire dict as JSON body
-    return JsonBody(data=raw)
+    known = {"json", "xml", "form", "files", "text"}
+    keys = set(raw.keys())
+    raise ValueError(
+        f"Unknown body format key(s): {keys - known}. "
+        f"Expected one of: {', '.join(sorted(known))}"
+    )
 
 
 def parse_expect_spec(raw: Any) -> ExpectSpec | None:
